@@ -15,7 +15,3 @@
 
 # Node.js dependencies:
 node_modules/
-
-# test Archive
-test-no-pvc
-test-with-pvc
