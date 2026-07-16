@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.config.name }}
+  annotations:
+    meta.helm.sh/release-name: {{ .Release.Name }}
+    meta.helm.sh/release-namespace: {{ .Release.Namespace }}
+spec:
+  strategy:
+      type: Recreate
+  replicas: {{ .Values.config.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.config.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.config.name }}
+    spec:
+      {{- if .Values.topologyConstraints.enabled }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: {{ .Values.config.name }}
+      {{- end }}
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: {{ .Values.config.name }}
+          image: {{ .Values.config.image }}
+          env:
+          {{- toYaml .Values.variables | nindent 12 }}
+          resources:
+          {{- toYaml .Values.config.resources | nindent 12 }}
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            httpGet:
+              path: /health-check/livez
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health-check/readyz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /health-check/livez
+              port: 8080
+            initialDelaySeconds: 10 
+            periodSeconds: 5
+            failureThreshold: 12 
+            timeoutSeconds: 5
+          ports:
+            - containerPort: 8080
+          {{- if .Values.persistence.enabled }}
+          volumeMounts:
+            - name: {{ .Values.persistence.name }}
+              mountPath: {{ .Values.persistence.mountPath }}
+          {{- end }}
+      {{- if .Values.persistence.enabled }}
+      volumes:
+        - name: {{ .Values.persistence.name }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.name }}-pvc
+      {{- end }}
+      nodeSelector:
+        cloud.google.com/gke-nodepool: {{ .Values.config.nodePool }}
+        iam.gke.io/gke-metadata-server-enabled: "true"
+      serviceAccountName: {{ .Values.config.serviceAccount }}

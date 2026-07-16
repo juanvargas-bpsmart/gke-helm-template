@@ -1,0 +1,22 @@
+config:
+  replicas: 1
+  name: whatsapp-be-service
+  image: us-central1-docker.pkg.dev/mi-proyecto/repo/whatsapp:v1.0
+  nodePool: standard-pool
+  namespace: dev
+  serviceAccount: k8s-dev
+  resources:
+    requests:
+      memory: 2Gi
+      cpu: 350m
+    limits:
+      memory: 3Gi
+      cpu: 900m
+
+persistence:
+  enabled: true # <--- Activado
+  name: wsp-sessions
+  size: 10Gi
+  storageClass: standard-rwo
+  mountPath: /app/.wwebjs_auth
+

@@ -1,0 +1,29 @@
+config:
+  replicas: 1
+  name: "service-default"
+  host: "localhost"
+  image: "nginx:latest"
+  nodePool: "default-node-pool"
+  namespace: "default"
+  serviceAccount: "default"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "200m"
+
+# Lista vacía de variables de entorno por defecto
+variables: []
+
+# Persistencia desactivada
+persistence:
+  enabled: false
+  name: "shared-storage"
+  size: "1Gi"
+  storageClass: "standard"
+  mountPath: "/mnt/data"
+
+topologyConstraints:
+  enabled: false

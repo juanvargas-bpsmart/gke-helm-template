@@ -1,0 +1,17 @@
+config:
+  replicas: 2
+  name: servicio-sin-disco
+  image: us-central1-docker.pkg.dev/mi-proyecto/repo/app:latest
+  nodePool: standard-pool
+  namespace: dev
+  serviceAccount: k8s-dev
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 200m
+
+persistence:
+  enabled: false # <--- Desactivado
