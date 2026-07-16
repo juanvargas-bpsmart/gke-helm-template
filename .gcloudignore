@@ -17,5 +17,5 @@
 node_modules/
 
 # test Archive
-test-no-pvc.yaml
-test-with-pvc.yaml
+test-no-pvc
+test-with-pvc
