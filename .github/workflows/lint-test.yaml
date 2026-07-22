@@ -1,0 +1,24 @@
+name: Lint and Test Templates
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-templates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+      - name: Run Helm Lint
+        run: helm lint ./chart
+
+      - name: Verify Dry-Run Render
+        run: |
+          helm template test-release ./chart

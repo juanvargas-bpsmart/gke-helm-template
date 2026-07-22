@@ -1,0 +1,49 @@
+name: Publish Helm Template OCI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish-chart:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Install Helm
+        run: |
+          command -v helm &>/dev/null || curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+      - name: Authenticate Helm with Artifact Registry
+        run: |
+          # Inicia sesión en el Artifact Registry de GCP usando la región configurada en tus secretos
+          gcloud auth print-access-token | helm registry login -u oauth2accesstoken --password-stdin https://${{ secrets.REGION }}-docker.pkg.dev
+
+      - name: Package and Push Helm Chart
+        run: |
+          VERSION=$(date +'%Y.%m.%d-%-H%M%S')
+          echo "Empaquetando Chart versión: $VERSION"
+          
+          sed -i "s/^version:.*/version: $VERSION/" chart/Chart.yaml
+          
+          mkdir -p packaged
+          helm package chart/ -d packaged
+          
+          CHART_NAME=$(grep '^name:' chart/Chart.yaml | awk '{print $2}')
+          
+          helm push packaged/${CHART_NAME}-${VERSION}.tgz oci://${{ secrets.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/helm-general-template

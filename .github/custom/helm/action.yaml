@@ -1,0 +1,79 @@
+name: Helm Chart Services Daviplata
+description: "Composite Action used to manage Helm Charts"
+inputs:
+  GCP_WORKLOAD_IDENTITY_PROVIDER:
+    required: true
+    description: "Google Cloud Platform Workload Identity Provider"
+  GCP_SERVICE_ACCOUNT:
+    required: true
+    description: "Google Cloud Platform Service Account Email"
+  GCP_PROJECT_ID:
+    required: true
+    description: "Google Cloud Platform Project ID"
+  REGION:
+    required: true
+    description: "Region used in GCP"
+  HELM_REPO_NAME:
+    required: true
+    description: "Helm repository name"
+  UPDATED_VERSION_CHART:
+    required: true
+    description: "Flag to determine if the chart should be updated (true/false)"
+
+outputs:
+  chart_version:
+    description: "Return value chart version compose action"
+    value: ${{ steps.get_chart_version.outputs.chart_version }}
+runs:
+  using: "composite"
+  steps:
+    - name: Authenticate with Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        workload_identity_provider: ${{ inputs.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+        service_account: ${{ inputs.GCP_SERVICE_ACCOUNT }}
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+    - name: Get chart version from Artifact Registry
+      id: get_chart_version
+      shell: bash
+      run: |
+        if [[ "${{ inputs.UPDATED_VERSION_CHART }}" == "true" ]]; then
+          VERSION=$(date +'%Y.%m.%d-%-M%-S')
+        else
+          LATEST_VERSION=$(gcloud artifacts versions list \
+            --repository=${{ inputs.HELM_REPO_NAME }} \
+            --package=${{ inputs.HELM_REPO_NAME }} \
+            --location=${{ inputs.REGION }} \
+            --format="json" | jq -r 'map(select(.metadata.mediaType == "application/vnd.oci.image.manifest.v1+json")) | sort_by(.updateTime) | last | .name')
+          VERSION=$(gcloud artifacts tags list \
+            --repository=${{ inputs.HELM_REPO_NAME }} \
+            --location=${{ inputs.REGION }} \
+            --package=${{ inputs.HELM_REPO_NAME }} \
+            --format="json" | jq -r --arg version "$LATEST_VERSION" '.[] | select(.version == $version) | .name' \
+            | awk -F'/' '{print $NF}')
+        fi
+        echo "chart_version=$VERSION" >> $GITHUB_OUTPUT
+    - name: Cache Helm binary
+      if: ${{ inputs.UPDATED_VERSION_CHART == 'true' }}
+      uses: actions/cache@v3
+      with:
+        path: /usr/local/bin/helm
+        key: ${{ runner.os }}-helm-v3.17.2
+    - name: Install Helm if not cached
+      if: ${{ inputs.UPDATED_VERSION_CHART == 'true' }}
+      shell: bash
+      run: |
+        command -v helm &>/dev/null || curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+    - name: Authenticate Artifact Helm
+      if: ${{ inputs.UPDATED_VERSION_CHART == 'true' }}
+      shell: bash
+      run: |
+        gcloud auth print-access-token | helm registry login -u oauth2accesstoken --password-stdin https://${{ inputs.REGION }}-docker.pkg.dev
+    - name: Package and push Helm chart if updated
+      shell: bash
+      if: ${{ inputs.UPDATED_VERSION_CHART == 'true' }}
+      run: |
+        sed -i "s/^version:.*/version: ${{ steps.get_chart_version.outputs.chart_version }}/" ci/helm/Chart.yaml
+        helm package ci/helm/ -d packaged
+        helm push packaged/${{ inputs.HELM_REPO_NAME }}-${{ steps.get_chart_version.outputs.chart_version }}.tgz oci://${{ inputs.REGION }}-docker.pkg.dev/${{ inputs.GCP_PROJECT_ID }}/${{ inputs.HELM_REPO_NAME }}

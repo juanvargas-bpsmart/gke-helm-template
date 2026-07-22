@@ -1,0 +1,8 @@
+name: Test Security adminui-front
+description: "Composite Action used to manage Tests Security"
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 1

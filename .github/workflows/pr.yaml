@@ -1,0 +1,18 @@
+name: Pull Request
+on:
+  pull_request:
+  workflow_run:
+    workflows: ["Code Quality"]
+    types:
+      - completed
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'pull_request' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      # - name: Run custom test security action
+      #   uses: ./.github/custom/security
