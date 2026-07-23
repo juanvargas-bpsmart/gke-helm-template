@@ -1,6 +1,6 @@
 apiVersion: v2
 name: gke-helm-template
-description: Chart centralizado para microservicios de la organizacion
+description: Centralized Chart for the Organization's Microservices
 type: application
 version: 1.0.0
 appVersion: "1.0.0"

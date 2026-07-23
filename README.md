@@ -1,4 +1,4 @@
-# Helm Template (Plantilla Centralizada para Microservicios)
+# Helm Template (Plantilla Centralizada)
 
 Este repositorio contiene la **plantilla maestra de Helm (Common Chart)** utilizada para estandarizar y simplificar el despliegue de todos los microservicios de la organización en Google Kubernetes Engine (GKE).
 
@@ -17,7 +17,7 @@ Al centralizar las plantillas de Kubernetes aquí, evitamos que cada microservic
 
 ---
 
-##  ¿Cómo funciona el ciclo de vida de la plantilla?
+##  Ciclo de vida de la plantilla
 
 El flujo de trabajo sigue de forma estricta el patrón de GitOps centralizado:
 
@@ -27,7 +27,7 @@ El flujo de trabajo sigue de forma estricta el patrón de GitOps centralizado:
 
 ---
 
-## 🛠️ ¿Cómo consumen los microservicios esta plantilla?
+## Consumo de esta plantilla
 
 Los repositorios de los microservicios ya no tienen archivos `.yaml` de Kubernetes. En su lugar, durante su propio pipeline de despliegue, realizan los siguientes pasos:
 
@@ -55,7 +55,7 @@ Para desplegar un microservicio utilizando esta plantilla, el repositorio de la 
 config:
   replicas: 1
   name: mi-servicio
-  image: us-central1-docker.pkg.dev/proyecto/mi-servicio:commit-sha
+  image: us-east1-docker.pkg.dev/proyecto/mi-servicio:commit-sha
   nodePool: pool-aplicaciones
   namespace: dev
   serviceAccount: k8s-dev
